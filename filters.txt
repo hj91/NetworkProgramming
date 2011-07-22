@@ -1,0 +1,10 @@
+#
+# Access Control List of tcpforwarder
+#
+# NOTE: 1. Only lines that are blank or beginning with "#" are ignored.
+#       2. Rules are case-insensitive.
+
+# Sample rules demonstrating the syntax
+#deny ::1
+#deny 166.111.0.0/16
+allow all
