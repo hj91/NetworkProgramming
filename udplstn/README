@@ -1,0 +1,109 @@
+[ coded by CyberPsychotic during several winter nights of 1998 ]
+			ideas/fixes:	fygrave@tigerteam.net
+			flames:		devnull@localhost
+
+Thanks to:
+----------
+Dave(djv@bedford.net) for testing.
+
+Purpose:
+--------
+	This little piece of code will allow you to collect packets
+coming to some certain port on your machine. Of course there are tons
+of other things, which could let you do the same thing (sniffit, tcpdump
+netcat, whatever). But I consider most of them as rather huge pieces of
+code which would suffer from a 'common programming disease known as 
+creeping featurism'(R.Stevens). While I tried to keep this small/simple, so
+one could run it as daemon and it won't (hoperfully) eat much purposes, nor
+compromice security (hoperfully).
+
+Building:
+---------
+	This code was developed on Linux (RH 5.0) platform but probably
+should compile on other platforms with lesser trouble. The code has two
+compile-time switches:
+(1) -DDEBUG
+	daemon won't deattach itself from terminal. won't open log file, but
+will print everything to stdout.
+(2) -DPONG
+	will play pingpong with packets, i.g. will send back each packet it
+received to the same address/port where it came from. :) will let you to
+have some fun over scanner sometime :-)
+
+Running:
+	./udplstn portnum
+Format of log file:
+SEQ num.          sender.     port size  flags           date
+[0x00000004]UDP-->192.168.1.21:138(203)	[0x40009B48]	Fri Nov 27 18:24:37 1998
+[0x00000005]UDP-->192.168.1.12:138(201)	[0x40009B48]	Fri Nov 27 18:25:26 1998
+[0x00000006]UDP-->192.168.1.12:138(201)	[0x40009B48]	Fri Nov 27 18:25:26 1998
+
+format of filename:
+Prfx   sender     port date            seq. num
+pack.192.168.1.21.138.97966874456344.0x00000004
+
+*NOTE* date is given in seconds since January 1, 1970. Just didn't feel like
+implementing something special here. SEQ is used in case if all packets
+comming from the same source, at the same second, will be saved.
+
+Hope it helps. let me know if want something else to be implemented.
+							---------------------
+							fygrave@tigerteam.net
+
+
+CHANGES:
+
+
+
+Mon Dec 14 21:32:28 KGT 1998
+	*Note* starting with version 1.0, things are changed abit.
+	The code became more complex, and new features added.
+	Some lame bugs are fixed. 
+
+	New features are being added (but not tested).
+	(*) command execution for each arriving packed. 
+	(passing IP addresses/ports feature is not added)
+	(*) logfile/packetdir is specified from command line, rather than
+	from within a source using #define.
+
+Tue Dec 15 18:42:09 KGT 1998
+	EXEC feature is finished.
+	Usage of binary has been changed abit:
+
+udplstn -p portnum [-v] [-l logfile] [-r rootdir forpacks] [-c command [args]] 
+where:
+
+-p portnum	point an UDP port number to use.
+-l logfile	full name of logfile, where to write. (doesn't make
+		a sence if compiled with -DDEBUG switch on, since
+		all the debugging will be printed out to stdout).
+-v 		be verbose. Reports all info before forking.
+-r rootdir	the patch of directory (MUST EXIST), where all the packets
+		will be stored.
+-c command arg1 arg2 ...
+		this !ALWAYS! should be the last argument. The rest of
+		command line is threated as arguments passed to command.
+
+		NOTE:
+		among arguments you may use:
+		IPADDR	- to point, where udplstn should place the IP address
+		in XXX.XXX.XXX.XXX form, of the source of the packet.
+		PORT	- to point where udplstn should place the port number
+		(decimal) where the packet came from.
+
+
+Output  of logfile is  slightly changed. (we do not print options yet).
+
+Tue Dec 22 17:07:27 KGT 1998
+	-a and -m switches added to avoid several DoS attack types.
+	(thanks for idea to Joel Maslak <bugtraq@wind-river.com>)
+	The code uses SIGALRM handler, which gets raised
+	very -a seconds. Please, if you specify '0' for this the code
+	will exit, when more than -m packets arrive.
+	If you want to revert back to older behaviour, you may specify
+	-m 0, and ALL packets will be logged (and if compiled with -DPONG 
+	all packets will be ponged).
+
+	the default values for -a and -m are set in udplstn.h file, and
+	could be overriden using -DALRMTIME=X (X is number of seconds for
+	-a switch) or -DPACKSPERALRM=Y (Y number of packets for -m switch)

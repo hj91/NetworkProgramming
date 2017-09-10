@@ -1,0 +1,183 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+
+Preface
+-------
+  Arhghghghghghg... Is there a portable way to read raw udp? This version
+  does only linux (I believe) as nothing else seems to wanna read incoming
+  traceroutes from a raw socket. This is presented only as a proof of
+  concept, and you should be aware that everything which follows sucks like
+  a fat intern in the oval office. I will do my best to include something
+  semi-workable in another release. To get future versions see the Contact
+  information at the bottom. Maybe I'll add latency faking next. =)
+
+
+Program
+-------
+  RotoRouter v1.0 (pronounced row-toe row-ter) by Richard Thomas (Humble).
+  A program for logging and faking the standard unix udp-based traceroute.
+
+
+Purpose
+-------
+  The other day I noticed something interesting. When someone is about to do
+  a DoS, it is common place for them to traceroute to the target, launch the
+  attack, and traceroute again to see the effect and get a hard-on, secure
+  in the belief that their traceroute will never be noticed. They commonly
+  trace from their home machines (99% of packet warriors have 28.8k modems
+  and bandwidth envy, right :P), or if nothing else from the hacked machine
+  they are attacking with. This gives an invaluable opportunity to log the
+  real ips of the attacker.
+
+  During the process of researching traceroute, I noticed something else.
+  Traceroutes can be faked. The generic unix traceroute operates like this:
+
+   - Send a UDP packet to the final destination, port P, ttl T
+   - Receive the ICMP Time Exceeded msg generated when ttl expires
+   - Print the source of the Time Exceed msg and how long it took to receive
+   - Increment P, increment T after X number of probes
+
+  Where P defaults to 33434 (32767+666, aka how to count by powers of two in
+  hell), T starts at 1, and X defaults to 3. Simple right? Well the
+  interesting part happens on the final hop, which looks something like this:
+
+   - Send a UDP packet to the final destination, port P, ttl T
+   - Receive the ICMP Dest Unreachable (Port Unreachable)
+   - Print the source of the Dest Unreachable msg and time it
+   - End traceroute.
+
+  The final hop (the target of the traceroute) makes some interesting
+  assumptions. We assume that the port we are probing to is not listening,
+  and the destination will automatically generate a dest unreachable msg.
+  But what happens if there IS something listening? No dest unreachable msg
+  is generated, and the traceroute never ends (well it times out after 30
+  hops by default, or when the user gets bored and hits ctrl-c). If there IS
+  something listening, it now knows the source of the traceroute, and how
+  many hops it is from the source. Log it.
+
+  Since we are listening on those ports and preventing the kernel from
+  generating a dest unreachable, their traceroute will now timeout. BUT,
+  what if we send back spoofed Time Exceeded and Dest Unreachable ICMPs?
+  Guess what, it shows up on their traceroute. You now have complete control
+  of where their traceroute goes (from 1 hop above you until they hit 30
+  hops). What can you do with this? Applications are left as an exercise for
+  the reader. But some suggestions:
+
+   - Lead them to your neighborhood oc48 where they promptly piss themselves
+   - Lead those stupid smurf kiddies away from your vulnerable routers
+   - Lie to customers about your bandwidth (be like sy.net!)
+   - Scare your bgp loving friends with odd routes, watch their heads explode
+   - Make the final hop reverse to "this.traceroute.has.been.logged.com"
+
+  "But wait," you say, "I'm one of the good guys, and I think someone is
+  pulling my chain. What can I do?" Well, the fake responses are generated
+  by making assumptions about the traceroute assumptions, so just change
+  some defaults. For example, the -n option can be used to change the
+  default base port.
+
+
+Downsides
+---------
+  Welp like any good program there are always downsides. I'll just save
+  people the trouble of pointing them out to me like I didn't know already
+  by listing them all myself.
+
+  #1: You need to be root to run this (or be able to open raw sockets)
+  #2: This uses a hefty number of file descriptors. By default 90 (thats 3
+      probes * 30 hops) are used to listen on likely ports and prevent your
+      kernel from sending the dest unreachable. If this is a problem, muck
+      with your kernel and up the fds. Or if you're bored you can change
+      the max sockets and base port to lessen your port coverage (ex: if there
+      are are 5 internal hops that everyone must go through to reach your
+      machine, and you are sure the people you want to lie to will be coming
+      from outside your network, you can save 15 fd's by adding 5*3 to the
+      baseport and subtracting 5*3 from the max sockets in config.h).
+  #3: This could be done MUCH better as a kernel mod. Very true, however this
+      program was (originally) designed to be portable, and I'm not going to
+      make kernel mods for everyone's unix flavor of choice.
+  #4: This doesn't log/fake Windoze tracert.exe traceroutes. Tracert.exe uses
+      ICMP Echo requests instead of udp directed at certain ports. If you're
+      bored you can make a variant of this program to work w/tracert.exe, but
+      it won't be made by me unless someone is paying. =)
+  #5: "<insert what's broken here> is goofed." Ohh well, I didn't have the
+      time or full range of systems I would have liked to test this more
+      fully. The only claim I make is that it works when I traceroute from
+      Linux, FreeBSD, Solaris, and even a cisco, to my home Linux machine.
+  #6: I deliberatly make no attempts to prevent log-filling floods in this
+      version, didn't have time, didn't care, will fix it later. =)
+  #7: This code is VERY sloppy. This was a kinda hurried release and I didn't
+      have time to nitpick my stuff... Don't use this as an example of a good
+      program. =)
+
+   That's it, take it or leave it, it's the best you're gonna get considering
+   I could be doing other things that actually help pay bills. =)
+
+
+Platforms
+---------
+  I have fully tested this on Linux (libc5 and libc6), and it compiles
+  without errors or warnings on FreeBSD, OpenBSD, and Solaris. If you can
+  donate an account on another OS for future projects (especially root
+  accounts <g>) let me know <humble@lightning.net>.
+
+
+How to use
+----------
+  Edit config.h, compile:
+
+  Linux: gcc -O2 -o rr rr.c
+  BSD: gcc -O2 -o rr rr.c
+  Solaris: cc -o rr rr.c -lnsl -lsocket
+
+  By default everything goes to stdout, so you'll most likely want to
+  redirect that to a log file and background it. Something like:
+    rr 10.0.0.1 10.0.0.2 10.0.0.3 > logfile &
+
+  If you do not pass any params we will just log without affecting the
+  traceroute (or using the boatload of fd's), otherwise the first arg is the
+  first fake hop, etc. I recommend you use dotted quad ips or else have a
+  quick/cached name server.
+
+
+Thanks to
+---------
+  Thanks to MayTrickZ for his assistance in nearly every area of this
+  project (translation: mad props), Dianora for listening to me ramble 'til
+  I figured things out myself, Moogle for next to nothing (but likes to be
+  greeted so who am I to deprive him), habit for the spell check, panasync
+  for letting me whore bitchx.com, and Temp for not NOT A DAMN THING. =)
+
+  And a special thanks to Dianora for the eggdrop song.
+
+You Wish
+--------
+  A big giant YOU WISH to Ted Hickman (meek) from sy.net, who tried to steal
+  an earlier version of my work and claim it as his own (despite not being
+  able to code his way out of a paper bag), after I told him I would not let
+  him use this program to lie to customers about their bandwidth.
+
+  And an extra FUCK YOU for trying to steal hardware I co-located, and for
+  not paying me a dime for the work I did for him. Wow you can rob a 19 year
+  old kid with $5 to his name, you must feel big.
+
+  <meek> all i need is to publish it to bugtraq
+  <meek> and it's worthless to you
+  <humble> publish what to bugtraq?
+  <meek> the source
+  <meek> the source you left on humble.sy.net
+  <meek> my post will be first
+
+
+Contact
+-------
+  IRC:   humble (EFnet)
+  EMAIL: humble@lightning.net
+  WWW:   http://www.bitchx.com/~humble/
+  FTP:   ftp.bitchx.com/pub/misc/humble/
+
+-----BEGIN PGP SIGNATURE-----
+Version: PGP 5.0
+
+iQA/AwUBNdDPQqZC7z/N4STPEQIT1QCg41G/UyEPnhN03c0zV4vIjsFTUu0AnjUn
+7potsm3coCr6NE50xAJA+C8s
+=mRpf
+-----END PGP SIGNATURE-----

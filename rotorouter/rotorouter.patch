@@ -1,0 +1,34 @@
+Date: Wed, 12 Aug 1998 11:37:35 -0400
+From: Richard Thomas <humble@LIGHTNING.NET>
+Subject: Re: RotoRouter 1.0 - Traceroute log & fake
+
+>Program
+>-------
+>  RotoRouter v1.0 (pronounced row-toe row-ter) by Richard Thomas (Humble).
+>  A program for logging and faking the standard unix udp-based traceroute.
+
+Woops change socket(AF_INET, SOCK_RAW, 0) to socket(AF_INET, SOCK_RAW,
+IPPROTO_RAW) on line 212.
+
+-----------------
+
+Date: Wed, 12 Aug 1998 11:40:47 -0400
+From: Richard Thomas <humble@LIGHTNING.NET>
+Subject: Re: RotoRouter 1.0 - Traceroute log & fake
+
+-----Original Message-----
+>From: Richard Thomas <humble@lightning.net>
+To: BUGTRAQ@NETSPACE.ORG <BUGTRAQ@NETSPACE.ORG>
+Date: Wednesday, August 12, 1998 11:37 AM
+Subject: Re: RotoRouter 1.0 - Traceroute log & fake
+
+
+>>Program
+>>-------
+>>  RotoRouter v1.0 (pronounced row-toe row-ter) by Richard Thomas (Humble).
+>>  A program for logging and faking the standard unix udp-based traceroute.
+>
+>Woops change socket(AF_INET, SOCK_RAW, 0) to socket(AF_INET,
+> SOCK_RAW, IPPROTO_RAW) on line 212.
+
+Err boy is my mind messed up... thats IPPROTO_UDP not RAW
